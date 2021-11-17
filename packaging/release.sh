@@ -11,7 +11,7 @@ set -e
 #             -V [stable | beta]
 #             -l [full | lite]
 #             -s [static | dynamic]
-#             -d [taos | power | tq ]
+#             -d [taos | power | tq | pro | kh]
 #             -n [2.0.0.3]
 #             -m [2.0.0.0]
 
@@ -22,7 +22,7 @@ cpuType=x64      # [aarch32 | aarch64 | x64 | x86 | mips64 ...]
 osType=Linux     # [Linux | Kylin | Alpine | Raspberrypi | Darwin | Windows | Ningsi60 | Ningsi80 |...]
 pagMode=full     # [full | lite]
 soMode=dynamic   # [static | dynamic]
-dbName=taos      # [taos | power | tq | pro]
+dbName=taos      # [taos | power | tq | pro | kh]
 allocator=glibc  # [glibc | jemalloc]
 verNumber=""
 verNumberComp="1.0.0.0"
@@ -78,7 +78,7 @@ do
       echo "                  -l [full | lite] "
       echo "                  -a [glibc | jemalloc] "
       echo "                  -s [static | dynamic] "
-      echo "                  -d [taos | power | tq | pro] "
+      echo "                  -d [taos | power | tq | pro | kh] "
       echo "                  -n [version number] "
       echo "                  -m [compatible version number] "
       exit 0
@@ -192,9 +192,32 @@ else
     allocator_macro=""
 fi
 
+# for prodb
 if [[ "$dbName" == "pro" ]]; then
-    sed -i "s/taos config/prodb config/g"   ${top_dir}/src/util/src/tconfig.c
-    sed -i "s/TDengine/ProDB/g" ${top_dir}/src/dnode/src/dnodeSystem.c
+  sed -i "s/taos config/prodb config/g" ${top_dir}/src/util/src/tconfig.c
+  sed -i "s/TDengine/ProDB/g" ${top_dir}/src/dnode/src/dnodeSystem.c
+  sed -i "s/taosdlog/prodlog/g"   ${top_dir}/src/dnode/src/dnodeMain.c
+  sed -i "s/taoslog/prolog/g"   ${top_dir}/src/client/src/tscSystem.c
+  sed -i "s/taosinfo/proinfo/g"   ${top_dir}/src/util/src/tnote.c
+  sed -i "s/taos\.cfg/prodb\.cfg/g"   ${top_dir}/src/dnode/CMakeLists.txt
+  sed -i "s/taos\.cfg/prodb\.cfg/g"   ${top_dir}/src/util/src/tconfig.c
+  sed -i "s/Default is taosdata/Default is prodb/g" ${top_dir}/src/kit/taosdump/taosdump.c
+  sed -i "s/\"taosdata\"/\"prodb\"/g" ${top_dir}/src/kit/taosdump/taosdump.c
+  sed -i "s/taos\/taos\.cfg/ProDB\/prodb\.cfg/g" ${top_dir}/src/kit/taosdump/taosdump.c
+fi
+
+# for KingHistorian
+if [[ "$dbName" == "kh" ]]; then
+  sed -i "s/taos config/kh config/g"  ${top_dir}/src/util/src/tconfig.c
+  sed -i "s/TDengine/KingHistorian/g"  ${top_dir}/src/dnode/src/dnodeSystem.c 
+  sed -i "s/taosdlog/khserverlog/g"  ${top_dir}/src/dnode/src/dnodeMain.c
+  sed -i "s/taoslog/khclientlog/g"  ${top_dir}/src/client/src/tscSystem.c
+  sed -i "s/taosinfo/khinfo/g"  ${top_dir}/src/util/src/tnote.c
+  sed -i "s/taos\.cfg/kinghistorian\.cfg/g"  ${top_dir}/src/dnode/CMakeLists.txt
+  sed -i "s/taos\.cfg/kinghistorian\.cfg/g"  ${top_dir}/src/util/src/tconfig.c
+  sed -i "s/Default is taosdata/Default is khroot/g" ${top_dir}/src/kit/taosdump/taosdump.c
+  sed -i "s/\"taosdata\"/\"khroot\"/g" ${top_dir}/src/kit/taosdump/taosdump.c
+  sed -i "s/taos\/taos\.cfg/kinghistorian\/kinghistorian\.cfg/g" ${top_dir}/src/kit/taosdump/taosdump.c
 fi
 
 
@@ -203,6 +226,16 @@ if [[ "$cpuType" == "x64" ]] || [[ "$cpuType" == "aarch64" ]] || [[ "$cpuType" =
   if [ "$verMode" != "cluster" ]; then
     cmake ../    -DCPUTYPE=${cpuType} -DOSTYPE=${osType} -DSOMODE=${soMode} -DDBNAME=${dbName} -DVERTYPE=${verType} -DVERDATE="${build_time}" -DGITINFO=${gitinfo} -DGITINFOI=${gitinfoOfInternal} -DVERNUMBER=${verNumber} -DVERCOMPATIBLE=${verNumberComp} -DPAGMODE=${pagMode} ${allocator_macro}
   else
+    if [[ "$dbName" == "pro" ]]; then
+      sed -i "s/taos\.cfg/prodb\.cfg/g"  ${top_dir}/../enterprise/src/plugins/admin/src/httpAdminHandle.c
+      sed -i "s/taos\.cfg/prodb\.cfg/g"  ${top_dir}/../enterprise/src/plugins/grant/src/grantMain.c
+      sed -i "s/taos\.cfg/prodb\.cfg/g"  ${top_dir}/../enterprise/src/plugins/module/src/moduleMain.c
+    fi
+    if [[ "$dbName" == "kh" ]]; then
+      sed -i "s/taos\.cfg/kinghistorian\.cfg/g"  ${top_dir}/../enterprise/src/plugins/admin/src/httpAdminHandle.c
+      sed -i "s/taos\.cfg/kinghistorian\.cfg/g"  ${top_dir}/../enterprise/src/plugins/grant/src/grantMain.c
+      sed -i "s/taos\.cfg/kinghistorian\.cfg/g"  ${top_dir}/../enterprise/src/plugins/module/src/moduleMain.c
+    fi
     cmake ../../ -DCPUTYPE=${cpuType} -DOSTYPE=${osType} -DSOMODE=${soMode} -DDBNAME=${dbName} -DVERTYPE=${verType} -DVERDATE="${build_time}" -DGITINFO=${gitinfo} -DGITINFOI=${gitinfoOfInternal} -DVERNUMBER=${verNumber} -DVERCOMPATIBLE=${verNumberComp} ${allocator_macro}
   fi
 else
@@ -263,6 +296,10 @@ if [ "$osType" != "Darwin" ]; then
     ${csudo} ./makepkg_pro.sh    ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode} ${dbName} ${verNumberComp}
     ${csudo} ./makeclient_pro.sh ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode} ${dbName}
     ${csudo} ./makearbi_pro.sh   ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode}
+  elif [[ "$dbName" == "kh" ]]; then
+    ${csudo} ./makepkg_kh.sh    ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode} ${dbName} ${verNumberComp}
+    ${csudo} ./makeclient_kh.sh ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode} ${dbName}
+    ${csudo} ./makearbi_kh.sh   ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode}
   else
     ${csudo} ./makepkg_power.sh    ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode} ${dbName} ${verNumberComp}
     ${csudo} ./makeclient_power.sh ${compile_dir} ${verNumber} "${build_time}" ${cpuType} ${osType} ${verMode} ${verType} ${pagMode} ${dbName}
