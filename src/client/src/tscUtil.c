@@ -268,11 +268,8 @@ bool tscIsProjectionQueryOnSTable(SQueryInfo* pQueryInfo, int32_t tableIndex) {
         functionId != TSDB_FUNC_TS &&
         functionId != TSDB_FUNC_ARITHM &&
         functionId != TSDB_FUNC_TS_COMP &&
-        functionId != TSDB_FUNC_DIFF &&
-        functionId != TSDB_FUNC_DERIVATIVE &&
-        functionId != TSDB_FUNC_MAVG &&
-        functionId != TSDB_FUNC_CSUM &&
         functionId != TSDB_FUNC_TS_DUMMY &&
+        functionId != TSDB_FUNC_TAG_DUMMY &&
         functionId != TSDB_FUNC_TID_TAG &&
         functionId != TSDB_FUNC_CEIL &&
         functionId != TSDB_FUNC_FLOOR &&
